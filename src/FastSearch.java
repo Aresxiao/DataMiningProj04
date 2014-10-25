@@ -22,11 +22,15 @@ public class FastSearch {
 	Map<Integer, Integer> postToThemeMap = new HashMap<Integer,Integer>();
 	ArrayList<HashSet<Integer>> postToThemeSets = new ArrayList<HashSet<Integer>>();
 	
+	double[][] vectorProduct;
+	
+	
 	public FastSearch(int totalPost,int totalTheme,int totalWords){
-		dc=0.9;
+		dc=0.86;
 		this.totalPost = totalPost;
 		this.totalTheme = totalTheme;
 		this.totalWords = totalWords;
+		
 		
 		desity = new double[totalPost];
 		distance = new double[totalPost];
@@ -44,13 +48,22 @@ public class FastSearch {
 	public void localDensity(double[][] trainPost){		//计算密度。
 		for(int i=0;i<trainPost.length;i++){
 			postLength[i] = vectorLength(trainPost[i]);
+			distance[i] = 2.1;
+		}
+		
+		vectorProduct = new double[trainPost.length][trainPost.length];
+		
+		for(int i = 0;i<trainPost.length;i++){
+			for(int j = 0;j<trainPost.length;j++){
+				vectorProduct[i][j] = innerProduct(trainPost[i], trainPost[j]);
+				vectorProduct[j][i] = vectorProduct[i][j];
+			}
 		}
 		for(int i=0;i<trainPost.length;i++){
 			recordDensity[i]=i;
 			for(int x=0;x<trainPost.length;x++){
 				if(x!=i){
-					double dis =1 - innerProduct(trainPost[i], trainPost[x])/(postLength[i]*postLength[x]);
-					//System.out.println("距离为:"+dis);
+					double dis =1 - vectorProduct[i][x]/(postLength[i]*postLength[x]);
 					if(dis<dc){
 						desity[i]+=1;
 					}
@@ -85,81 +98,72 @@ public class FastSearch {
 		for(int i=0;i<trainPost.length;i++){		//对于一般的点，距离的定义是取比该点局部密度大的所有点的最小距离
 			
 			for(int x=0;x<trainPost.length;x++){
-				if(i!=x&&desity[x]>desity[i]){
-					double dis =1 - innerProduct(trainPost[i], trainPost[x])/(postLength[i]*postLength[x]);
-					if(distance[i]==0){
+				if(i!=x&&(desity[x]>desity[i])){
+					double dis =1 - vectorProduct[i][x]/(postLength[i]*postLength[x]);
+					
+					if(distance[i]>dis){
 						distance[i]=dis;
-					}
-					else{
-						if(distance[i]<dis){
-							distance[i]=dis;
-						}
 					}
 				}
 			}
 		}
 		
-		//对于密度最大的点，delta值是别的点到该点的最大的距离。
+		//对于密度最大的点，delta值是为3。
 		int max=0;
 		for(int i=0;i<trainPost.length;i++){
 			if(desity[max]<desity[i]){
 				max=i;
 			}
 		}
-		for(int i=0;i<trainPost.length;i++){
-			if(i!=max){
-				double dis =1 - innerProduct(trainPost[max], trainPost[i])/(postLength[max]*postLength[i]);
-				if(distance[max]<dis)
-					distance[max]=dis;
-			}
-		}
+		distance[max]=3;
+		
 	}
 	
 	public void selectCenter(double[][] trainPost){		//选取中心点
-		double[] product = new double[totalPost];
+		
+		double[] tempDensity = desity.clone();
 		int[] record = new int[totalPost];
-		
-		for(int i=0;i<totalPost;i++){
-			product[i]=desity[i]*distance[i];
+		for(int i = 0;i<totalPost;i++)
 			record[i] = i;
-		}
-		
-		//对乘积进行排序
-		for(int i=0;i<totalPost;i++){
-			int max=i;
-			for(int j=i;j<totalPost;j++){
-				if(product[j]>product[max]){
-					max=j;
-				}
+		for(int i = 0;i<totalPost;i++){
+			int max = i;
+			for(int j = i+1;j<totalPost;j++){
+				if(tempDensity[max]<tempDensity[j])
+					max = j;
 			}
 			if(max!=i){
-				double t = product[i];
-				product[i] = product[max];
-				product[max] = t;
+				double t = tempDensity[max];
+				tempDensity[max] = tempDensity[i];
+				tempDensity[i] = t;
 				
-				int rec = record[i];
-				record[i] = record[max];
-				record[max]=rec;
+				int rec = record[max];
+				record[max] = record[i];
+				record[i] = rec;
 			}
 		}
-		
-		
-		for(int i=0;i<totalTheme;i++){
+		int count = 0;
+		for(int i = 0;i<totalPost;i++){
 			
-			int row = record[i];
-			for(int j=0;j<totalWords;j++){
-				center[i][j] = trainPost[row][j];
+			int line = record[i];
+			if(distance[line]>0.79){
+				for(int j = 0;j<totalWords;j++){
+					center[count][j] = trainPost[line][j];
+				}
+				
+				ArrayList<Integer> list = postPerThemeList.get(count);
+				list.add(line);
+				postToThemeMap.put(line, count);
+				postToThemeSets.get(count).add(line);
+				count++;
 			}
-			ArrayList<Integer> list = postPerThemeList.get(i);
-			list.add(row);
-			postToThemeMap.put(row, i);
-			postToThemeSets.get(i).add(row);
+			
+			if(count>=10)
+				break;
 		}
 		
 	}
 	
 	public ArrayList<HashSet<Integer>> calCenterPerPost(double[][] trainPost){
-		
 		for(int i=0;i<totalPost;i++){
 			int max=i;
 			for(int j=i;j<totalPost;j++){
@@ -184,8 +188,8 @@ public class FastSearch {
 				for(int j=0;j<i;j++){
 					int rj = recordDensity[j];
 					int rmin = recordDensity[min];
-					double dmin =1 - innerProduct(trainPost[rmin], trainPost[row])/(postLength[rmin]*postLength[row]);
-					double dj =1 - innerProduct(trainPost[rj], trainPost[row])/(postLength[rj]*postLength[row]);
+					double dmin = 1 - vectorProduct[rmin][row]/(postLength[rmin]*postLength[row]);
+					double dj = 1 - vectorProduct[rj][row]/(postLength[rj]*postLength[row]);
 					if(dmin>dj){
 						min=j;
 					}
