@@ -173,7 +173,7 @@ public class Main {
 		}
 		
 		//K-means方法
-		/*
+		
 		KMeans means = new KMeans(10, remainWordCount);
 		means.generateSeeds(trainPost);
 		System.out.println("产生完十个点");
@@ -181,7 +181,7 @@ public class Main {
 		
 		double nmi = NMI(clusterSetList, realClusterSets, countPost);
 		System.out.println("K-Means计算出的NMI值为:"+nmi);
-		*/
+		
 		//Science FastSearch
 		FastSearch fastSearch = new FastSearch(countPost, countTheme, remainWordCount);
 		fastSearch.localDensity(trainPost);

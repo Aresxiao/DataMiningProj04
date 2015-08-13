@@ -21,7 +21,7 @@ public class KMeans {
 		this.k = k;
 		this.totalWords = totalWords;
 		seeds = new double[k][totalWords];
-		System.out.println("k="+k+"totalWord="+totalWords);
+		//System.out.println("k="+k+"totalWord="+totalWords);
 	}
 	
 	public double consineDistance(double[] v1,double[] v2){
@@ -53,7 +53,7 @@ public class KMeans {
 		}
 		
 		int len = sample.length;
-		System.out.println("长度为:"+len);
+		
 		HashSet<Integer> set = new HashSet<Integer>();
 		for(int i=0;i<k;i++){
 			
@@ -62,47 +62,10 @@ public class KMeans {
 				row = (int) (Math.random()*len);
 			}
 			set.add(row);
-			System.out.println("generateSeeds : "+row);
 			for(int j=0;j<totalWords;j++){
 				seeds[i][j] = sample[row][j];
 			}
 		}
-		
-		
-		/*
-		int len = sample.length;
-		HashSet<Integer> set = new HashSet<Integer>();
-		int count=0;
-		int fr = (int) (Math.random() * len);
-		for(int j = 0;j < totalWords;j++){
-			seeds[count][j] = sample[fr][j];
-		}
-		set.add(fr);
-		count++;
-		while(count<k){
-			double[] dis = new double[len];
-			for(int i = 0;i < len;i++){
-				double max = 0;
-				
-				for(int s = 0;s<count;s++){
-					double d = innerProduct(sample[i], seeds[s])/(postVectorLength[i]*vectorLength(seeds[s]));
-					if(max<d){
-						max = d;
-					}
-				}
-				dis[i] = max;
-			}
-			int r = 0;
-			for(int i = 0;i < len;i++){
-				if(dis[r]>dis[i])
-					r = i;
-			}
-			for(int j = 0;j < totalWords;j++){
-				seeds[count][j] = sample[r][j];
-			}
-			count++;
-		}
-		*/
 		
 	}
 	
@@ -116,7 +79,7 @@ public class KMeans {
 			clusterSetList.add(set);
 		}
 		int cycleCount=0;
-		int flag = 0;
+		
 		while(cycleCount<6){
 			for(int i=0;i<k;i++){
 				clusterSetList.get(i).clear();
@@ -124,7 +87,7 @@ public class KMeans {
 			for(int i=0;i<trainPost.length;i++){
 				int row=0;
 				double min = consineDistance(trainPost[i], seeds[0]);
-				//System.out.println("第"+i+"个数据最小值为"+min);
+				
 				for(int j = 1;j<k;j++){
 					double d = innerProduct(trainPost[i], seeds[j]) / (postVectorLength[i]*vectorLength(seeds[j]));
 					if(d > min){
@@ -136,21 +99,20 @@ public class KMeans {
 			}
 			
 			for(int i = 0;i < k;i++){
-				for(int j = 0;j < totalWords;j++){
-					double sum = 0;
-					Iterator<Integer> iterator = clusterSetList.get(i).iterator();
-					while(iterator.hasNext()){
-						int r = iterator.next();
-						sum += trainPost[r][j];
+				if(clusterSetList.get(i).size()!=0){
+					for(int j = 0;j < totalWords;j++){
+						double sum = 0;
+						Iterator<Integer> iterator = clusterSetList.get(i).iterator();
+						while(iterator.hasNext()){
+							int r = iterator.next();
+							sum += trainPost[r][j];
+						}
+						seeds[i][j] = sum / clusterSetList.get(i).size();
 					}
-					seeds[i][j] = sum / clusterSetList.get(i).size();
 				}
 			}
 			
-			System.out.println("----------------------------");
-			for(int i=0;i<k;i++){
-				System.out.println("第"+i+"个集合的大小为"+clusterSetList.get(i).size());
-			}
+			
 			cycleCount++;
 		}
 		
